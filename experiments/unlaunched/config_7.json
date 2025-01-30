@@ -1,0 +1,99 @@
+{
+    "model_configs":[
+        {"name":"mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "type":"AutoModelForCausalLM"},
+        {"name":"mistralai/Codestral-22B-v0.1",
+        "type":"AutoModelForCausalLM"}
+    ],
+    "module_configs":[
+        {
+            "type":"AgentModule",
+            "agent_config":{
+                "type":"HuggingfaceLLMAgent",
+                "model_name":"mistralai/Mixtral-8x7B-Instruct-v0.1",
+                "system_prompt_func_config":{
+                    "type":"SystemPrompt",
+                    "instructions":["You are an engineer architect who designs an apartment. You create a plan for the apartment, determine the location of the walls and doors. You arrange the rooms and determine the connections between them.", 
+                    "The apartment you design must meet the following requirements: {requirements}.", 
+                    "You receive an input task to create an apartment. Describe in detail the sequence of actions that need to be done to design an apartment according to the task. Justify your choice.",
+                    "The sequence of actions should include only the creation of rooms.",
+                    {
+                        "type":"TextFewShots",
+                        "instr":"Here are some examples of what you need to do:\n{few_shots}",
+                        "template":"Example {n_example}\nTask to create an apartment: {task}\nSequence of actions: {actions}",
+                        "few_shots_path":"./experiments/unlaunched/base_few_shots.json",
+                        "few_shot_inds":[7, 9, 11]
+                    }],
+                    "instruction_context_path":"./experiments/unlaunched/instruction_context.json",
+                    "linebreak_after":[0, 1, 2, 3]
+                },
+                "user_input_func_config":{
+                    "type":"UserPrompt",
+                    "template":"{user_input}"
+                },
+                "t":0.9,
+                "max_length":128000
+            },
+            "input_paths":{
+                "system":{},
+                "user":{
+                    "user_input":["input"]
+                }
+            },
+            "output_path":["actions"]
+        },
+        {
+            "type":"IterativeModule",
+            "splitting_input_path":["actions"],
+            "splitting_func_config":
+            {
+                "type":"InstructionsExtractor"
+            },
+            "splitted_buffer_path":["action_buffer"],
+            "output_path":["code"],
+            "result_buffer_path":["code_buffer"],
+            "result_base_value":"public Flat DesignFlat()\n{\n    Flat flat = new Flat(new List<Room> { });\n    return flat;\n}",
+            "base_module_config":
+            {
+                "type":"AgentModule",
+                "agent_config":{
+                    "type":"HuggingfaceVLMAgent",
+                    "model_name":"mistralai/Codestral-22B-v0.1",
+                    "system_prompt_func_config":{
+                        "type":"SystemPrompt",
+                        "instructions":["You are a qualified engineer who has an excellent understanding of apartment layouts. You hold a management position, so your job is to find errors in the drawings of your subordinates and give advice on how to correct them.", 
+                        "You must find errors such as:\n1. Intersection of rooms - when the outlines of two or more rooms intersect each other. There are several signs that rooms overlap: there may be white space between them, and their outlines may touch;\n2. Crooked room outline - when a room has an outline that includes slanted lines;\n3. Empty space between rooms - when there is white space between rooms that is not filled with other rooms.",
+                        "When you find errors, you advise how to correct them.",
+                        {
+                            "type":"TextFewShots",
+                            "instr":"I will show you some examples of how to correct errors. Below are images of apartment layouts with errors. For each image, it is indicated what errors are in them and how they can be corrected:\n{few_shots}",
+                            "template":"Example {n_example}\nImage: {image_path}\nReview: {review}",
+                            "few_shots_path":"./experiments/unlaunched/expert_vlm_few_shots.json",
+                            "few_shot_inds":[0, 1, 2]
+                        }],
+                        "instruction_context_path":"./experiments/unlaunched/instruction_context.json",
+                        "linebreak_after":[0, 1, 2]
+                    },
+                    "user_input_func_config":{
+                        "type":"UserPrompt",
+                        "template":"{user_input}"
+                    },
+                    "t":0.2,
+                    "max_length":128000
+                },
+                "input_paths":{
+                    "system":{},
+                    "user":{
+                        "code_state":["code_buffer"],
+                        "instruction":["action_buffer"]
+                    }
+                },
+                "output_path":["code_buffer"],
+                "output_processor_config":{
+                    "type":"CodeExtractor",
+                    "language":"csharp"
+                }
+            }
+        }
+    ]
+}

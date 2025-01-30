@@ -1,0 +1,99 @@
+{
+    "model_configs":[
+        {"name":"mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "type":"AutoModelForCausalLM"},
+        {"name":"mistralai/Codestral-22B-v0.1",
+        "type":"AutoModelForCausalLM"}
+    ],
+    "module_configs":[
+        {
+            "type":"AgentModule",
+            "agent_config":{
+                "type":"HuggingfaceLLMAgent",
+                "model_name":"mistralai/Mixtral-8x7B-Instruct-v0.1",
+                "system_prompt_func_config":{
+                    "type":"SystemPrompt",
+                    "instructions":["You are an engineer architect who designs an apartment. You create a plan for the apartment, determine the location of the walls and doors. You arrange the rooms and determine the connections between them.", 
+                    "The apartment you design must meet the following requirements: {requirements}.", 
+                    "You receive an input task to create an apartment. Describe in detail the sequence of actions that need to be done to design an apartment according to the task. Justify your choice.",
+                    "The sequence of actions should include only the creation of rooms.",
+                    {
+                        "type":"TextFewShots",
+                        "instr":"Here are some examples of what you need to do:\n{few_shots}",
+                        "template":"Example {n_example}\nTask to create an apartment: {task}\nSequence of actions: {actions}",
+                        "few_shots_path":"./experiments/1/base_few_shots.json",
+                        "few_shot_inds":[7, 9, 11]
+                    }],
+                    "instruction_context_path":"./experiments/2/instruction_context.json",
+                    "linebreak_after":[0, 1, 2, 3]
+                },
+                "user_input_func_config":{
+                    "type":"UserPrompt",
+                    "template":"{user_input}"
+                },
+                "t":0.9,
+                "max_length":128000
+            },
+            "input_paths":{
+                "system":{},
+                "user":{
+                    "user_input":["input"]
+                }
+            },
+            "output_path":["actions"]
+        },
+        {
+            "type":"IterativeModule",
+            "splitting_input_path":["actions"],
+            "splitting_func_config":
+            {
+                "type":"InstructionsExtractor"
+            },
+            "splitted_buffer_path":["action_buffer"],
+            "output_path":["code"],
+            "result_buffer_path":["code_buffer"],
+            "result_base_value":"public Flat DesignFlat()\n{\n    Flat flat = new Flat(new List<Room> { });\n    return flat;\n}",
+            "base_module_config":
+            {
+                "type":"AgentModule",
+                "agent_config":{
+                    "type":"HuggingfaceLLMAgent",
+                    "model_name":"mistralai/Codestral-22B-v0.1",
+                    "system_prompt_func_config":{
+                        "type":"SystemPrompt",
+                        "instructions":["You are a qualified CAD engineer. You can create drawings in a CAD system. The drawing is created using C# code.", 
+                        "You receive the current state of the code that creates the apartment plan as input, in the form of the DesignFlat() method. Finally, you receive instructions on what to add to the code. Modify the code based on the instructions and return the new code to the DesignFlat method entirely.", 
+                        "You are required to make an additional corridor if you need to connect rooms that are not adjacent. Change the position of the already created rooms so that the rooms do not intersect.",
+                        {
+                            "type":"TextFewShots",
+                            "instr":"Here are some examples of what you need to do:\n{few_shots}",
+                            "template":"Example {n_example}\nCode state:\n```csharp\n{code_state}\n```\nCurrent instruction: \"{instruction}\" \nModified code:\n```csharp\n{modified_code}\n```",
+                            "few_shots_path":"./experiments/2/step_few_shots.json",
+                            "few_shot_inds":[9, 10, 11, 12, 13, 14, 15, 16]
+                        }],
+                        "instruction_context_path":"./experiments/2/instruction_context.json",
+                        "linebreak_after":[0, 1, 2]
+                    },
+                    "user_input_func_config":{
+                        "type":"UserPrompt",
+                        "template":"Code state:\n```csharp\n{code_state}\n```\nCurrent instruction: \"{instruction}\" "
+                    },
+                    "t":0.2,
+                    "max_length":128000
+                },
+                "input_paths":{
+                    "system":{},
+                    "user":{
+                        "code_state":["code_buffer"],
+                        "instruction":["action_buffer"]
+                    }
+                },
+                "output_path":["code_buffer"],
+                "output_processor_config":{
+                    "type":"CodeExtractor",
+                    "language":"csharp"
+                }
+            }
+        }
+    ]
+}
