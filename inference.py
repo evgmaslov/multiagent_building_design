@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 
 from src.modules import MultiagentSystem
 
@@ -8,6 +9,9 @@ def main(config_path, output_path, log_path):
         config = json.load(f)
     multiagent_system = MultiagentSystem(config, log_path)
     user_input = input("Input: ")
+    if os.path.exists(user_input):
+        with open(user_input, "r") as f:
+            user_input = json.load(f)
     final_context = multiagent_system(user_input)
     with open(output_path, "w+") as f:
         json.dump(final_context, f)

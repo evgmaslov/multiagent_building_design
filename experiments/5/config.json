@@ -1,0 +1,39 @@
+{
+    "model_configs":[
+        {"name":"Qwen/Qwen2-VL-7B-Instruct",
+        "type":"Qwen2VLForConditionalGeneration"}
+    ],
+    "module_configs":[
+        {
+            "type":"AgentModule",
+            "agent_config":{
+                "type":"HuggingfaceVLMAgent",
+                "model_name":"Qwen/Qwen2-VL-7B-Instruct",
+                "system_prompt_func_config":{
+                    "type":"SystemPrompt",
+                    "instructions":["You are a highly qualified engineer engaged in the development of utility networks for buildings. Your main task is to design pipelines. You must design the pipes so that they do not interfere with each other or with the rest of the building.", 
+                    "Now you need to help me correct the incorrect pipe routing. You receive as input an image of the intersection of pipes with each other or with other structures. You will be given 4 images showing the intersection location in the front, left, top and axonometric projection. You must describe what elements intersect in the image and how they intersect. You should also describe how the pipeline routing needs to be changed to correct the intersection."],
+                    "instruction_context_path":"./experiments/5/instruction_context.json",
+                    "linebreak_after":[0, 1]
+                },
+                "user_input_func_config":{
+                    "type":"UserPrompt",
+                    "template":"Front view: {front_view}\nLeft view: {left_view}\nTop view: {top_view}\nAxonometric projection: {axonometric_projection}\nSolution: ",
+                    "args_modalities":{"front_view":"image", "left_view":"image", "top_view":"image", "axonometric_projection":"image"}
+                },
+                "t":0.9,
+                "max_length":128000
+            },
+            "input_paths":{
+                "system":{},
+                "user":{
+                    "front_view":["input", "front_view"],
+                    "left_view":["input", "left_view"],
+                    "top_view":["input", "top_view"],
+                    "axonometric_projection":["input", "axonometric_projection"]
+                }
+            },
+            "output_path":["solution"]
+        }
+    ]
+}

@@ -65,6 +65,7 @@ class HuggingfaceVLMAgent():
     def __init__(self, model, log_path, model_name, system_prompt_func_config, user_input_func_config, t = -1, max_length = 4096):
         self.log_path = log_path
         self.model = model
+        self.model_name = model_name
         self.tokenizer = AutoProcessor.from_pretrained(model_name)
         self.generation_config = GenerationConfig.from_pretrained(model_name)
         self.generation_config.max_length = max_length

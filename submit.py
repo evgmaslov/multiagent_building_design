@@ -14,8 +14,6 @@ def main(config_path, dataset_name, subset_name, input_key, output_path, log_pat
     with open(output_path, "r") as f:
         submit = json.load(f)
     for i, row in enumerate(dataset):
-        if i < 5:
-            continue
         user_input = row[input_key]
         final_context = multiagent_system(user_input)
         submit.append(final_context)

@@ -14,8 +14,8 @@ class MultiagentSystem():
             model_name = model_config["name"]
             model_type = globals()[model_config["type"]]
             model = model_type.from_pretrained(model_name,
-                                             device_map='auto',
-                                  low_cpu_mem_usage=True, offload_state_dict=True)
+                                             device_map='auto', low_cpu_mem_usage=True, 
+                                  offload_state_dict=True)
             self.models[model_name] = model
         self.modules = []
         for module_config in config["module_configs"]:
